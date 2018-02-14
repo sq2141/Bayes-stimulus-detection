@@ -1,0 +1,291 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>stimulus_detection</title><meta name="generator" content="MATLAB 8.5.1"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2018-02-13"><meta name="DC.source" content="stimulus_detection.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><pre class="codeinput"><span class="comment">%{
+</span><span class="comment">-----------------------------------------------------------
+</span><span class="comment">          Neural decoding for stimulus detection
+</span><span class="comment">                         Sam Qian
+</span><span class="comment">-----------------------------------------------------------
+</span><span class="comment">
+</span><span class="comment">I simulate Poisson spike trains of one neuron, which has some baseline
+</span><span class="comment">firing rate and a higher firing rate in response to a stimulus. I
+</span><span class="comment">then use Baye's rule to determine the probability of a stimulus being
+</span><span class="comment">present using the probability density functions generated from simulated
+</span><span class="comment">data.
+</span><span class="comment">
+</span><span class="comment">resources consulted:
+</span><span class="comment">https://praneethnamburi.wordpress.com/2015/02/05/simulating-neural-spike-trains/
+</span><span class="comment">
+</span><span class="comment">Requires: plotSpikeRaster_v1.2
+</span><span class="comment">
+</span><span class="comment">%}
+</span>
+clear <span class="string">all</span>;
+close <span class="string">all</span>;
+clc;
+
+
+<span class="comment">% Set neuron and trial parameters</span>
+tSim = 1; <span class="comment">% simulation duration in s</span>
+nTrials = 1000; <span class="comment">% number of trials to simulate</span>
+pS = 0.3; <span class="comment">% probability of stimulus being present</span>
+fr_baseline = 5; <span class="comment">% firing rate without stimulus, in Hz</span>
+fr_stimulus = 15; <span class="comment">% firing rate with stimulus present, in Hz</span>
+nTrialsBaseline = round(nTrials*(1-pS)); <span class="comment">% number of trials that are baseline</span>
+nTrialsStimulus = round(nTrials*pS); <span class="comment">% number of trials that are stimulus</span>
+
+
+<span class="comment">% Generate spikes</span>
+dt = 1/1000; <span class="comment">% timestep (in s) in simulation (i.e. 1 ms)</span>
+nBins = floor(tSim/dt); <span class="comment">% number of time bins for the given simulation duration</span>
+spikeTrains_baseline = rand(nTrialsBaseline, nBins) &lt; fr_baseline*dt; <span class="comment">% generate spike train</span>
+spikeTrains_stimulus = rand(nTrialsStimulus, nBins) &lt; fr_stimulus*dt; <span class="comment">% generate spike train</span>
+
+
+<span class="comment">% Plot distribution of spike counts per sec (i.e. the firing rates of simulated</span>
+<span class="comment">% trials)</span>
+<span class="keyword">for</span> i=1:nTrialsBaseline;
+    count_baseline(i,1) = (size(find(spikeTrains_baseline(i,:)==1),2))/tSim;
+<span class="keyword">end</span>
+
+<span class="keyword">for</span> i=1:nTrialsStimulus;
+    count_stimulus(i,1) = (size(find(spikeTrains_stimulus(i,:)==1),2))/tSim;
+<span class="keyword">end</span>
+
+figure;
+hold <span class="string">on</span>
+h1=histogram(count_baseline);
+h2=histogram(count_stimulus);
+xlabel(<span class="string">'Firing rate (Hz)'</span>);
+ylabel(<span class="string">'Number of trials'</span>);
+legend(<span class="string">'Baseline'</span>,<span class="string">'Stimulus'</span>);
+</pre><img vspace="5" hspace="5" src="stimulus_detection_01.png" alt=""> <pre class="codeinput"><span class="comment">% Raster plots of stimulated spike trains</span>
+figure;
+LineFormat.LineWidth = 0.7;
+LineFormat.Color = [0 0 0];
+plotSpikeRaster(spikeTrains_baseline,<span class="string">'PlotType'</span>,<span class="string">'vertline'</span>,<span class="string">'LineFormat'</span>,LineFormat);
+xlabel(<span class="string">'Time (ms)'</span>);
+ylabel(<span class="string">'Trials (baseline)'</span>);
+
+figure;
+LineFormat.LineWidth = 0.7;
+LineFormat.Color = [0 0 0];
+plotSpikeRaster(spikeTrains_stimulus,<span class="string">'PlotType'</span>,<span class="string">'vertline'</span>,<span class="string">'LineFormat'</span>,LineFormat);
+xlabel(<span class="string">'Time (ms)'</span>);
+ylabel(<span class="string">'Trials (stimulus)'</span>);
+</pre><img vspace="5" hspace="5" src="stimulus_detection_02.png" alt=""> <img vspace="5" hspace="5" src="stimulus_detection_03.png" alt=""> <pre class="codeinput"><span class="comment">% Use simulated spike train to estimate lambda to re-derive probability</span>
+<span class="comment">% density functions</span>
+lambdahat_baseline = poissfit(count_baseline);
+lambdahat_stimulus = poissfit(count_stimulus);
+
+pd_baseline = makedist(<span class="string">'Poisson'</span>,lambdahat_baseline);
+pd_stimulus = makedist(<span class="string">'Poisson'</span>,lambdahat_stimulus);
+
+x = [0:max(count_stimulus)*1.5];
+y_baseline = pdf(pd_baseline, x);
+y_stimulus = pdf(pd_stimulus, x);
+
+<span class="comment">% Plot pdf derived from stimulated spike trains</span>
+figure;
+hold <span class="string">on</span>;
+plot(x,y_baseline);
+plot(x,y_stimulus);
+xlabel(<span class="string">'N (Firing rate, Hz)'</span>);
+ylabel(<span class="string">'p(N)'</span>);
+legend(<span class="string">'Baseline'</span>, <span class="string">'Stimulus'</span>);
+title(<span class="string">'Probability density functions of baseline and stimulus conditions'</span>);
+</pre><img vspace="5" hspace="5" src="stimulus_detection_04.png" alt=""> <pre class="codeinput"><span class="comment">% Bayesian probability of stimulus present given a firing rate</span>
+posterior = (y_stimulus*pS)./(y_stimulus*(pS)+y_baseline*(1-pS));
+
+figure;
+hold <span class="string">on</span>;
+plot(x, posterior,<span class="string">'k'</span>);
+xlabel(<span class="string">'N (Firing rate, Hz)'</span>);
+ylabel(<span class="string">'p(Stimulus|N)'</span>);
+title(<span class="string">'Probability of stimulus being present given the firing rate'</span>);
+xlim([0 25])
+ylim([0 2])
+</pre><img vspace="5" hspace="5" src="stimulus_detection_05.png" alt=""> <p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2015a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%{
+REPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASH-
+          Neural decoding for stimulus detection 
+                         Sam Qian
+REPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASH-
+
+I simulate Poisson spike trains of one neuron, which has some baseline 
+firing rate and a higher firing rate in response to a stimulus. I 
+then use Baye's rule to determine the probability of a stimulus being
+present using the probability density functions generated from simulated
+data.
+
+resources consulted:
+https://praneethnamburi.wordpress.com/2015/02/05/simulating-neural-spike-trains/
+
+Requires: plotSpikeRaster_v1.2
+
+%}
+
+clear all;
+close all;
+clc;
+
+
+% Set neuron and trial parameters
+tSim = 1; % simulation duration in s
+nTrials = 1000; % number of trials to simulate
+pS = 0.3; % probability of stimulus being present
+fr_baseline = 5; % firing rate without stimulus, in Hz
+fr_stimulus = 15; % firing rate with stimulus present, in Hz
+nTrialsBaseline = round(nTrials*(1-pS)); % number of trials that are baseline
+nTrialsStimulus = round(nTrials*pS); % number of trials that are stimulus
+
+
+% Generate spikes
+dt = 1/1000; % timestep (in s) in simulation (i.e. 1 ms)
+nBins = floor(tSim/dt); % number of time bins for the given simulation duration
+spikeTrains_baseline = rand(nTrialsBaseline, nBins) < fr_baseline*dt; % generate spike train
+spikeTrains_stimulus = rand(nTrialsStimulus, nBins) < fr_stimulus*dt; % generate spike train
+
+
+% Plot distribution of spike counts per sec (i.e. the firing rates of simulated
+% trials)
+for i=1:nTrialsBaseline;
+    count_baseline(i,1) = (size(find(spikeTrains_baseline(i,:)==1),2))/tSim;
+end
+
+for i=1:nTrialsStimulus;
+    count_stimulus(i,1) = (size(find(spikeTrains_stimulus(i,:)==1),2))/tSim;
+end
+
+figure;
+hold on
+h1=histogram(count_baseline);
+h2=histogram(count_stimulus);
+xlabel('Firing rate (Hz)');
+ylabel('Number of trials');
+legend('Baseline','Stimulus');
+
+%%
+
+% Raster plots of stimulated spike trains
+figure;
+LineFormat.LineWidth = 0.7;
+LineFormat.Color = [0 0 0];
+plotSpikeRaster(spikeTrains_baseline,'PlotType','vertline','LineFormat',LineFormat);
+xlabel('Time (ms)');
+ylabel('Trials (baseline)');
+
+figure;
+LineFormat.LineWidth = 0.7;
+LineFormat.Color = [0 0 0];
+plotSpikeRaster(spikeTrains_stimulus,'PlotType','vertline','LineFormat',LineFormat);
+xlabel('Time (ms)');
+ylabel('Trials (stimulus)');
+
+%%
+
+% Use simulated spike train to estimate lambda to re-derive probability
+% density functions
+lambdahat_baseline = poissfit(count_baseline);
+lambdahat_stimulus = poissfit(count_stimulus);
+
+pd_baseline = makedist('Poisson',lambdahat_baseline);
+pd_stimulus = makedist('Poisson',lambdahat_stimulus);
+
+x = [0:max(count_stimulus)*1.5];
+y_baseline = pdf(pd_baseline, x);
+y_stimulus = pdf(pd_stimulus, x);
+
+% Plot pdf derived from stimulated spike trains
+figure;
+hold on;
+plot(x,y_baseline);
+plot(x,y_stimulus);
+xlabel('N (Firing rate, Hz)');
+ylabel('p(N)');
+legend('Baseline', 'Stimulus');
+title('Probability density functions of baseline and stimulus conditions');
+
+
+%%
+
+% Bayesian probability of stimulus present given a firing rate
+posterior = (y_stimulus*pS)./(y_stimulus*(pS)+y_baseline*(1-pS));
+
+figure;
+hold on;
+plot(x, posterior,'k');
+xlabel('N (Firing rate, Hz)');
+ylabel('p(Stimulus|N)');
+title('Probability of stimulus being present given the firing rate');
+xlim([0 25])
+ylim([0 2])
+
+##### SOURCE END #####
+--></body></html>
