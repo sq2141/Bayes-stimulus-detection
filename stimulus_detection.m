@@ -6,7 +6,7 @@
 
 I simulate Poisson spike trains of one neuron, which has some baseline 
 firing rate and a higher firing rate in response to a stimulus. I 
-then use Baye's rule to determine the probability of a stimulus being
+then use Bayes' rule to determine the probability of a stimulus being
 present using the probability density functions generated from simulated
 data.
 
