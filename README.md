@@ -1,4 +1,4 @@
-# stimulus-detection
+# Stimulus-detection
 
 I simulate Poisson spike trains of one neuron, which has some baseline 
 firing rate and a higher firing rate in response to a stimulus. I 
