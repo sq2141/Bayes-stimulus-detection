@@ -10,3 +10,5 @@ resources consulted:
 https://praneethnamburi.wordpress.com/2015/02/05/simulating-neural-spike-trains/
 
 Requires: plotSpikeRaster_v1.2
+
+![](stimulus_readme_img.png)
